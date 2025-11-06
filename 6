@@ -58,3 +58,17 @@ local Window = Library.CreateLib("💰 Shrek in the Backrooms", "DarkTheme")
     MainSection:NewButton("Unlock Levels", " ", function()
         loadstring(game:HttpGet('https://raw.githubusercontent.com/Tamachiru/AppleX/main/Unlock_Levels'))()
     end)
+
+    MainSection:NewButton("Unlock Badge Areas", " ", function()
+        local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+for _, descendant in ipairs(workspace:WaitForChild("BadgeAreas"):GetDescendants()) do
+	if descendant:IsA("BasePart") then
+		firetouchinterest(humanoidRootPart, descendant, 0)
+		task.wait(0.05)
+		firetouchinterest(humanoidRootPart, descendant, 1)
+	end
+end
+    end)
