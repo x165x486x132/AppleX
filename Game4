@@ -1,0 +1,257 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "🎁 Ultimate Auto-Gifter",
+    LoadingTitle = "Scanning ShopFolders...",
+    LoadingSubtitle = "By Apple X System",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = false,
+})
+
+local MainTab = Window:CreateTab("Gifting Dashboard", 4483362458)
+local AppleXTab = Window:CreateTab("Apple X", 4483362458)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            local promptGui = CoreGui:FindFirstChild("RobloxPromptGui") or CoreGui:FindFirstChild("PurchasePrompt")
+            if promptGui and promptGui.Enabled then
+                promptGui.Enabled = false
+            end
+        end)
+    end
+end)
+
+local Settings = { AutoSpoof = true }
+
+local function ForceExtremeSpoof(id)
+    local numId = tonumber(id)
+    if not numId then return end
+    task.spawn(function()
+        pcall(function()
+            local get_id = getidentity or (syn and syn.get_thread_identity)
+            local set_id = setthreadidentity or (syn and syn.set_thread_identity)
+            local old_id = get_id and get_id() or 2
+            
+            if set_id then set_id(8) end
+            MarketplaceService:SignalPromptProductPurchaseFinished(LocalPlayer.UserId, numId, true)
+            MarketplaceService:SignalPromptGamePassPurchaseFinished(LocalPlayer, numId, true)
+            MarketplaceService:SignalPromptPurchaseFinished(LocalPlayer, numId, true)
+            if set_id then set_id(old_id) end
+        end)
+    end)
+end
+
+if hookmetamethod then
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if not checkcaller() and Settings.AutoSpoof then
+            if string.match(method, "^Prompt.*Purchase") and tostring(self) == "MarketplaceService" then
+                local id = args[2] or args[1]
+                if tonumber(id) then
+                    ForceExtremeSpoof(tonumber(id))
+                    return -- Returns nothing! This completely prevents the local prompt from popping up
+                end
+            end
+        end
+        return oldNamecall(self, ...)
+    end))
+end
+
+local function OnServerPrompt(ply, id)
+    if Settings.AutoSpoof and ply == LocalPlayer then
+        ForceExtremeSpoof(id)
+    end
+end
+MarketplaceService.PromptGamePassPurchaseRequested:Connect(OnServerPrompt)
+MarketplaceService.PromptProductPurchaseRequested:Connect(OnServerPrompt)
+MarketplaceService.PromptPurchaseRequested:Connect(OnServerPrompt)
+
+local ShopFolders = ReplicatedStorage:WaitForChild("ShopFolders", 5)
+local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
+local GiftRemote = Remotes and Remotes:WaitForChild("Gift", 5)
+
+local function ExtractItems(folderName)
+    local items = {}
+    if not ShopFolders then return items end
+    local folder = ShopFolders:FindFirstChild(folderName)
+    
+    if folder then
+        for _, itemFolder in ipairs(folder:GetChildren()) do
+            local giftIdVal = itemFolder:FindFirstChild("GiftID")
+            if giftIdVal then
+                items[itemFolder.Name] = giftIdVal.Value
+            end
+        end
+    end
+    return items
+end
+
+local GamepassList = ExtractItems("Gamepasses")
+local BoosterList = ExtractItems("Boosters")
+local MoneyList = ExtractItems("Money")
+
+local TargetPlayerName = LocalPlayer.Name
+
+local function GetPlayerNames()
+    local names = {}
+    for _, p in ipairs(Players:GetPlayers()) do table.insert(names, p.Name) end
+    return names
+end
+
+MainTab:CreateSection("Gift Target")
+
+local PlayerDrop = MainTab:CreateDropdown({
+    Name = "Select Player",
+    Options = GetPlayerNames(),
+    CurrentOption = {LocalPlayer.Name},
+    MultipleOptions = false,
+    Flag = "TargetPlayer",
+    Callback = function(Option)
+        TargetPlayerName = Option[1]
+    end,
+})
+
+MainTab:CreateButton({
+    Name = "🔄 Refresh Player List",
+    Callback = function()
+        PlayerDrop:Refresh(GetPlayerNames())
+    end,
+})
+
+local function SendGift(id, categoryType)
+    if not GiftRemote then 
+        Rayfield:Notify({Title = "Error", Content = "'Gift' remote not found.", Duration = 3})
+        return 
+    end
+    
+    local targetObj = Players:FindFirstChild(TargetPlayerName)
+    if not targetObj then return end
+
+    local args = {
+        id,
+        categoryType,
+        targetObj 
+    }
+    
+    GiftRemote:FireServer(unpack(args))
+end
+
+MainTab:CreateSection("Special Triggers")
+
+local InfiniteRunning = false
+MainTab:CreateToggle({
+    Name = "♾️ 3M Money Spam",
+    CurrentValue = false,
+    Flag = "InfMoneyToggle",
+    Callback = function(Value)
+        InfiniteRunning = Value
+        if Value then
+            Rayfield:Notify({Title = "Trigger Activated", Content = "Spamming Money Gift silently...", Duration = 2})
+            task.spawn(function()
+                while InfiniteRunning do
+                    SendGift(2691378047, "Money")
+                    task.wait(0.2) -- Safe delay to ensure server processes it
+                end
+            end)
+        else
+            Rayfield:Notify({Title = "Trigger Stopped", Content = "Infinite Money stopped.", Duration = 2})
+        end
+    end,
+})
+
+local function BuildCategoryUI(tab, title, itemsTable, remoteTypeStr)
+    tab:CreateSection("🎁 " .. title)
+    
+    local names = {}
+    for name, _ in pairs(itemsTable) do table.insert(names, name) end
+    
+    if #names == 0 then
+        tab:CreateLabel("❌ No items found in " .. title)
+        return
+    end
+
+    local selectedItemName = names[1]
+
+    tab:CreateDropdown({
+        Name = "Select : " .. title,
+        Options = names,
+        CurrentOption = {selectedItemName},
+        MultipleOptions = false,
+        Flag = title.."Drop",
+        Callback = function(Option)
+            selectedItemName = Option[1]
+        end,
+    })
+
+    tab:CreateButton({
+        Name = "🎁 Send Selected Item",
+        Callback = function()
+            local id = itemsTable[selectedItemName]
+            if id then
+                SendGift(id, remoteTypeStr)
+                Rayfield:Notify({Title = "Gift Sent", Content = "You sent: " .. selectedItemName .. " to " .. TargetPlayerName, Duration = 2})
+            end
+        end,
+    })
+
+    tab:CreateButton({
+        Name = "💥 SEND ALL (Mass Gift)",
+        Callback = function()
+            Rayfield:Notify({Title = "Processing Mass Gift", Content = "Sending all " .. title .. " (Please wait a few seconds)...", Duration = 3})
+            
+            -- Runs in background so it doesn't freeze the menu
+            task.spawn(function()
+                for name, id in pairs(itemsTable) do
+                    SendGift(id, remoteTypeStr)
+                    task.wait(0.4) -- SLOWED DOWN: Forces the server to process every single item correctly!
+                end
+                Rayfield:Notify({Title = "Mass Gift Completed", Content = "All " .. title .. " were successfully sent to " .. TargetPlayerName, Duration = 4})
+            end)
+        end,
+    })
+end
+
+-- Building sections
+BuildCategoryUI(MainTab, "Gamepasses", GamepassList, "Gamepass")
+BuildCategoryUI(MainTab, "Boosters", BoosterList, "Booster")
+BuildCategoryUI(MainTab, "Money", MoneyList, "Money")
+
+AppleXTab:CreateSection("Apple X Community")
+
+AppleXTab:CreateButton({
+    Name = "💬 Join Apple X Discord Server",
+    Callback = function()
+        local discordLink = "https://discord.gg/rFEyywkDBz"
+        if setclipboard then
+            setclipboard(discordLink)
+            Rayfield:Notify({
+                Title = "Link Copied!",
+                Content = "The Discord link has been copied to your clipboard.",
+                Duration = 4,
+                Image = 4483362458,
+            })
+        else
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Your executor does not support copying to clipboard. Link: discord.gg/rFEyywkDBz",
+                Duration = 6,
+            })
+        end
+    end,
+})
+
+Rayfield:Notify({
+    Title = "Menu Ready",
+    Content = "All categories loaded! The annoying Buy Menu is completely hidden.",
+    Duration = 5,
+    Image = 4483362458,
+})
