@@ -9,8 +9,8 @@ local BlacklistedUsers = {
 }
 
 if BlacklistedUsers[LocalPlayer.Name] then
-    LocalPlayer:Kick("You got blacklisted. Loser")
-    return -- Arrête immédiatement l'exécution du reste du code
+    LocalPlayer:Kick("You got blacklisted. L")
+    return
 end
 -- ==========================================
 
@@ -92,7 +92,7 @@ local Window = Rayfield:CreateWindow({
         Title = "🍏 Apple X - Verification",
         Subtitle = "Key System",
         Note = "Please join our Discord server and go to the #key channel to get your key!", -- Message d'avertissement
-        FileName = "AppleX_KeyData", -- Nom de sauvegarde pour que l'utilisateur n'ait pas à la remettre à chaque fois
+        FileName = "AppleX_KeyData",
         SaveKey = true,
         GrabKeyFromSite = false,
         Key = {"APPLEX_1564gze9JOIHREOISQDJL"} -- Ta clé
