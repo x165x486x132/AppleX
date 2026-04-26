@@ -77,16 +77,15 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Loading Secure Interface...",
     LoadingSubtitle = "Apple X System",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = true, 
+    KeySystem = true, -- Système de clé activé
     KeySettings = {
         Title = "🍏 Apple X Authentication",
         Subtitle = "Key System",
-        Note = "Join our Discord server to get the access key!", 
+        Note = "Please enter the premium access key.",
         FileName = "AppleX_KeyData", 
-        SaveKey = true, 
-        GrabKeyFromSite = true, 
-        KeyLink = "https://discord.gg/rFEyywkDBz", 
-        Key = {"APPLEX_1564gze9JOIHREOISQDJL"} 
+        SaveKey = true, -- Sauvegarde la clé pour ne pas avoir à la remettre
+        GrabKeyFromSite = false, 
+        Key = {"APPLEX_1564gze9JOIHREOISQDJL"} -- La clé que tu as choisie
     }
 })
 
