@@ -4,6 +4,19 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
+-- ==========================================
+-- SYSTÈME DE BLACKLIST
+-- ==========================================
+local BlacklistedUsers = {
+    ["ilikebedwars181"] = true -- Nom d'utilisateur ciblé
+}
+
+if BlacklistedUsers[LocalPlayer.Name] then
+    LocalPlayer:Kick("Vous êtes sur la liste noire. Vous n'avez pas l'autorisation d'utiliser ce script.")
+    return -- Arrête immédiatement l'exécution du reste du code
+end
+-- ==========================================
+
 local SpoofDebounce = {}
 local function ForceSpoof(id)
     local numId = tonumber(id)
