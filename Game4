@@ -87,7 +87,16 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Loading Secure Interface...",
     LoadingSubtitle = "Apple X System",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = false,
+    KeySystem = true, -- Activation du système de clé
+    KeySettings = {
+        Title = "🍏 Apple X - Verification",
+        Subtitle = "Key System",
+        Note = "Please join our Discord server and go to the #key channel to get your key!", -- Message d'avertissement
+        FileName = "AppleX_KeyData", -- Nom de sauvegarde pour que l'utilisateur n'ait pas à la remettre à chaque fois
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"APPLEX_1564gze9JOIHREOISQDJL"} -- Ta clé
+    }
 })
 
 local GiftTab = Window:CreateTab("🎁 Gifting Hub", 4483362458)
