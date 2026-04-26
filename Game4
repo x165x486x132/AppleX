@@ -9,7 +9,7 @@ local BlacklistedUsers = {
 }
 
 if BlacklistedUsers[LocalPlayer.Name] then
-    LocalPlayer:Kick("Vous êtes sur la liste noire. Vous n'avez pas l'autorisation d'utiliser ce script.")
+    LocalPlayer:Kick("You got blacklisted. Loser")
     return -- Arrête immédiatement l'exécution du reste du code
 end
 -- ==========================================
