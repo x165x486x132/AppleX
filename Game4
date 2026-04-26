@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "🎁 Ultimate Auto-Gifter",
+    Name = "🎁 Apple X | Gifter",
     LoadingTitle = "Scanning ShopFolders...",
     LoadingSubtitle = "By Apple X System",
     ConfigurationSaving = { Enabled = false },
