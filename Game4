@@ -4,35 +4,12 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = Rayfield:CreateWindow({
-    Name = "🎁 Apple X | Gifter",
-    LoadingTitle = "Scanning ShopFolders...",
-    LoadingSubtitle = "By Apple X System",
-    ConfigurationSaving = { Enabled = false },
-    KeySystem = false,
-})
-
-local MainTab = Window:CreateTab("Gifting Dashboard", 4483362458)
-local AppleXTab = Window:CreateTab("Apple X", 4483362458)
-
-task.spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            local promptGui = CoreGui:FindFirstChild("RobloxPromptGui") or CoreGui:FindFirstChild("PurchasePrompt")
-            if promptGui and promptGui.Enabled then
-                promptGui.Enabled = false
-            end
-        end)
-    end
-end)
-
-local Settings = { AutoSpoof = true }
-
-local function ForceExtremeSpoof(id)
+local SpoofDebounce = {}
+local function ForceSpoof(id)
     local numId = tonumber(id)
-    if not numId then return end
+    if not numId or SpoofDebounce[numId] then return end
+    SpoofDebounce[numId] = true
+    
     task.spawn(function()
         pcall(function()
             local get_id = getidentity or (syn and syn.get_thread_identity)
@@ -45,35 +22,67 @@ local function ForceExtremeSpoof(id)
             MarketplaceService:SignalPromptPurchaseFinished(LocalPlayer, numId, true)
             if set_id then set_id(old_id) end
         end)
+        task.wait(0.5)
+        SpoofDebounce[numId] = false
     end)
 end
 
 if hookmetamethod then
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    
+    mt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        local args = {...}
-        if not checkcaller() and Settings.AutoSpoof then
-            if string.match(method, "^Prompt.*Purchase") and tostring(self) == "MarketplaceService" then
+        if not checkcaller() and self == MarketplaceService then
+            if method == "PromptGamePassPurchase" or method == "PromptProductPurchase" or method == "PromptPurchase" or method == "PromptPremiumPurchase" then
+                local args = {...}
                 local id = args[2] or args[1]
                 if tonumber(id) then
-                    ForceExtremeSpoof(tonumber(id))
-                    return 
+                    ForceSpoof(id)
+                    return
                 end
             end
         end
         return oldNamecall(self, ...)
-    end))
+    end)
+    setreadonly(mt, true)
 end
 
 local function OnServerPrompt(ply, id)
-    if Settings.AutoSpoof and ply == LocalPlayer then
-        ForceExtremeSpoof(id)
-    end
+    if ply == LocalPlayer then ForceSpoof(id) end
 end
 MarketplaceService.PromptGamePassPurchaseRequested:Connect(OnServerPrompt)
 MarketplaceService.PromptProductPurchaseRequested:Connect(OnServerPrompt)
 MarketplaceService.PromptPurchaseRequested:Connect(OnServerPrompt)
+
+local function BlockGui(gui)
+    pcall(function()
+        if gui:IsA("ScreenGui") and (gui.Name == "RobloxPromptGui" or gui.Name == "PurchasePrompt") then
+            gui.Enabled = false
+            gui:GetPropertyChangedSignal("Enabled"):Connect(function()
+                if gui.Enabled then gui.Enabled = false end
+            end)
+        end
+    end)
+end
+
+for _, v in pairs(CoreGui:GetChildren()) do BlockGui(v) end
+CoreGui.ChildAdded:Connect(BlockGui)
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "🍏 Apple X | Highway Legends",
+    LoadingTitle = "Loading Secure Interface...",
+    LoadingSubtitle = "Apple X System",
+    ConfigurationSaving = { Enabled = false },
+    KeySystem = false,
+})
+
+local GiftTab = Window:CreateTab("🎁 Gifting Hub", 4483362458)
+local SpamTab = Window:CreateTab("⚡ Auto Spam", 4483362458)
+local HubTab = Window:CreateTab("🌐 Settings & Hub", 4483362458)
 
 local ShopFolders = ReplicatedStorage:WaitForChild("ShopFolders", 5)
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5)
@@ -83,23 +92,24 @@ local function ExtractItems(folderName)
     local items = {}
     if not ShopFolders then return items end
     local folder = ShopFolders:FindFirstChild(folderName)
-    
     if folder then
         for _, itemFolder in ipairs(folder:GetChildren()) do
             local giftIdVal = itemFolder:FindFirstChild("GiftID")
-            if giftIdVal then
-                items[itemFolder.Name] = giftIdVal.Value
-            end
+            if giftIdVal then items[itemFolder.Name] = giftIdVal.Value end
         end
     end
     return items
 end
 
-local GamepassList = ExtractItems("Gamepasses")
-local BoosterList = ExtractItems("Boosters")
-local MoneyList = ExtractItems("Money")
+local Categories = {
+    Gamepass = ExtractItems("Gamepasses"),
+    Booster = ExtractItems("Boosters"),
+    Money = ExtractItems("Money")
+}
 
 local TargetPlayerName = "All"
+local SelectedCategory = "Gamepass"
+local SelectedItemName = ""
 
 local function GetPlayerNames()
     local names = {"All"}
@@ -109,29 +119,17 @@ local function GetPlayerNames()
     return names
 end
 
-MainTab:CreateSection("Gift Target")
-
-local PlayerDrop = MainTab:CreateDropdown({
-    Name = "Select Player",
-    Options = GetPlayerNames(),
-    CurrentOption = {"All"},
-    MultipleOptions = false,
-    Flag = "TargetPlayer",
-    Callback = function(Option)
-        TargetPlayerName = Option[1]
-    end,
-})
-
-MainTab:CreateButton({
-    Name = "🔄 Refresh Player List",
-    Callback = function()
-        PlayerDrop:Refresh(GetPlayerNames())
-    end,
-})
+local function GetItemNames(cat)
+    local names = {}
+    if Categories[cat] then
+        for k, _ in pairs(Categories[cat]) do table.insert(names, k) end
+    end
+    if #names == 0 then table.insert(names, "None") end
+    return names
+end
 
 local function SendGift(id, categoryType)
     if not GiftRemote then return end
-    
     if TargetPlayerName == "All" then
         for _, p in ipairs(Players:GetPlayers()) do
             GiftRemote:FireServer(id, categoryType, p)
@@ -144,24 +142,79 @@ local function SendGift(id, categoryType)
     end
 end
 
-MainTab:CreateSection("Spam")
+GiftTab:CreateSection("Target Settings")
 
-local SpamStates = {
-    Money3M = false,
-    AllMoney = false,
-    AllGamepasses = false,
-    AllBoosters = false,
-    Nuke = false
-}
+local PlayerDrop = GiftTab:CreateDropdown({
+    Name = "Select Target",
+    Options = GetPlayerNames(),
+    CurrentOption = {"All"},
+    MultipleOptions = false,
+    Flag = "TargetPlayer",
+    Callback = function(Option)
+        TargetPlayerName = Option[1]
+    end,
+})
 
-MainTab:CreateToggle({
-    Name = "♾️ 3M Money Spam",
+GiftTab:CreateButton({
+    Name = "🔄 Refresh Players",
+    Callback = function()
+        PlayerDrop:Refresh(GetPlayerNames())
+    end,
+})
+
+GiftTab:CreateSection("Manual Gifting")
+
+local ItemDrop 
+GiftTab:CreateDropdown({
+    Name = "Select Category",
+    Options = {"Gamepass", "Booster", "Money"},
+    CurrentOption = {"Gamepass"},
+    MultipleOptions = false,
+    Flag = "CatDrop",
+    Callback = function(Option)
+        SelectedCategory = Option[1]
+        local newNames = GetItemNames(SelectedCategory)
+        SelectedItemName = newNames[1]
+        if ItemDrop then 
+            ItemDrop:Refresh(newNames)
+        end
+    end,
+})
+
+ItemDrop = GiftTab:CreateDropdown({
+    Name = "Select Item",
+    Options = GetItemNames("Gamepass"),
+    CurrentOption = {GetItemNames("Gamepass")[1]},
+    MultipleOptions = false,
+    Flag = "ItemDrop",
+    Callback = function(Option)
+        SelectedItemName = Option[1]
+    end,
+})
+
+GiftTab:CreateButton({
+    Name = "📤 Send Selected Gift",
+    Callback = function()
+        if SelectedItemName == "None" then return end
+        local id = Categories[SelectedCategory][SelectedItemName]
+        if id then
+            SendGift(id, SelectedCategory)
+            Rayfield:Notify({Title = "Sent", Content = "Successfully sent " .. SelectedItemName, Duration = 2})
+        end
+    end,
+})
+
+local SpamStates = { Money3M = false, AllMoney = false, AllGamepasses = false, AllBoosters = false, Nuke = false }
+
+SpamTab:CreateSection("Targeted Spam")
+
+SpamTab:CreateToggle({
+    Name = "♾️ Spam 3M Money Package",
     CurrentValue = false,
     Flag = "InfMoneyToggle",
     Callback = function(Value)
         SpamStates.Money3M = Value
         if Value then
-            Rayfield:Notify({Title = "Activated", Content = "Spamming 3M...", Duration = 2})
             task.spawn(function()
                 while SpamStates.Money3M do
                     SendGift(2691378047, "Money")
@@ -172,8 +225,8 @@ MainTab:CreateToggle({
     end,
 })
 
-MainTab:CreateToggle({
-    Name = "💸 Spam Money",
+SpamTab:CreateToggle({
+    Name = "💸 Spam All Money Packages",
     CurrentValue = false,
     Flag = "SpamAllMoney",
     Callback = function(Value)
@@ -181,10 +234,10 @@ MainTab:CreateToggle({
         if Value then
             task.spawn(function()
                 while SpamStates.AllMoney do
-                    for _, id in pairs(MoneyList) do
+                    for _, id in pairs(Categories.Money) do
                         if not SpamStates.AllMoney then break end
                         SendGift(id, "Money")
-                        task.wait(0.1)
+                        task.wait(0.15)
                     end
                 end
             end)
@@ -192,8 +245,8 @@ MainTab:CreateToggle({
     end,
 })
 
-MainTab:CreateToggle({
-    Name = "⭐ Spam Gamepasses",
+SpamTab:CreateToggle({
+    Name = "⭐ Spam All Gamepasses",
     CurrentValue = false,
     Flag = "SpamAllGamepasses",
     Callback = function(Value)
@@ -201,7 +254,7 @@ MainTab:CreateToggle({
         if Value then
             task.spawn(function()
                 while SpamStates.AllGamepasses do
-                    for _, id in pairs(GamepassList) do
+                    for _, id in pairs(Categories.Gamepass) do
                         if not SpamStates.AllGamepasses then break end
                         SendGift(id, "Gamepass")
                         task.wait(0.15)
@@ -212,8 +265,8 @@ MainTab:CreateToggle({
     end,
 })
 
-MainTab:CreateToggle({
-    Name = "⚡ Spam Boosters",
+SpamTab:CreateToggle({
+    Name = "⚡ Spam All Boosters",
     CurrentValue = false,
     Flag = "SpamAllBoosters",
     Callback = function(Value)
@@ -221,8 +274,41 @@ MainTab:CreateToggle({
         if Value then
             task.spawn(function()
                 while SpamStates.AllBoosters do
-                    for _, id in pairs(BoosterList) do
+                    for _, id in pairs(Categories.Booster) do
                         if not SpamStates.AllBoosters then break end
+                        SendGift(id, "Booster")
+                        task.wait(0.15)
+                    end
+                end
+            end)
+        end
+    end,
+})
+
+SpamTab:CreateSection("Ultimate Destruction")
+
+SpamTab:CreateToggle({
+    Name = "☢️ NUKE MODE (Spam Everything)",
+    CurrentValue = false,
+    Flag = "NukeSpam",
+    Callback = function(Value)
+        SpamStates.Nuke = Value
+        if Value then
+            Rayfield:Notify({Title = "NUKE ACTIVATED", Content = "Heavy spam initiated...", Duration = 3})
+            task.spawn(function()
+                while SpamStates.Nuke do
+                    for _, id in pairs(Categories.Money) do
+                        if not SpamStates.Nuke then break end
+                        SendGift(id, "Money")
+                        task.wait(0.1)
+                    end
+                    for _, id in pairs(Categories.Gamepass) do
+                        if not SpamStates.Nuke then break end
+                        SendGift(id, "Gamepass")
+                        task.wait(0.1)
+                    end
+                    for _, id in pairs(Categories.Booster) do
+                        if not SpamStates.Nuke then break end
                         SendGift(id, "Booster")
                         task.wait(0.1)
                     end
@@ -232,108 +318,21 @@ MainTab:CreateToggle({
     end,
 })
 
-MainTab:CreateToggle({
-    Name = "☢️ NUKE",
-    CurrentValue = false,
-    Flag = "NukeSpam",
-    Callback = function(Value)
-        SpamStates.Nuke = Value
-        if Value then
-            Rayfield:Notify({Title = "NUKE", Content = "Spamming...", Duration = 3})
-            task.spawn(function()
-                while SpamStates.Nuke do
-                    for _, id in pairs(MoneyList) do
-                        if not SpamStates.Nuke then break end
-                        SendGift(id, "Money")
-                        task.wait(0.05)
-                    end
-                    for _, id in pairs(GamepassList) do
-                        if not SpamStates.Nuke then break end
-                        SendGift(id, "Gamepass")
-                        task.wait(0.05)
-                    end
-                    for _, id in pairs(BoosterList) do
-                        if not SpamStates.Nuke then break end
-                        SendGift(id, "Booster")
-                        task.wait(0.05)
-                    end
-                end
-            end)
-        end
-    end,
-})
+HubTab:CreateSection("Information & Socials")
 
-local function BuildCategoryUI(tab, title, itemsTable, remoteTypeStr)
-    tab:CreateSection("🎁 " .. title)
-    
-    local names = {}
-    for name, _ in pairs(itemsTable) do table.insert(names, name) end
-    
-    if #names == 0 then return end
-
-    local selectedItemName = names[1]
-
-    tab:CreateDropdown({
-        Name = "Select : " .. title,
-        Options = names,
-        CurrentOption = {selectedItemName},
-        MultipleOptions = false,
-        Flag = title.."Drop",
-        Callback = function(Option)
-            selectedItemName = Option[1]
-        end,
-    })
-
-    tab:CreateButton({
-        Name = "🎁 Send Selected",
-        Callback = function()
-            local id = itemsTable[selectedItemName]
-            if id then
-                SendGift(id, remoteTypeStr)
-                Rayfield:Notify({Title = "Sent", Content = selectedItemName .. " sent.", Duration = 2})
-            end
-        end,
-    })
-
-    tab:CreateButton({
-        Name = "💥 SEND ALL",
-        Callback = function()
-            task.spawn(function()
-                for _, id in pairs(itemsTable) do
-                    SendGift(id, remoteTypeStr)
-                    task.wait(0.4) 
-                end
-                Rayfield:Notify({Title = "Completed", Content = "Mass gift completed.", Duration = 4})
-            end)
-        end,
-    })
-end
-
-BuildCategoryUI(MainTab, "Gamepasses", GamepassList, "Gamepass")
-BuildCategoryUI(MainTab, "Boosters", BoosterList, "Booster")
-BuildCategoryUI(MainTab, "Money", MoneyList, "Money")
-
-AppleXTab:CreateSection("Community")
-
-AppleXTab:CreateButton({
-    Name = "💬 Join Discord",
+HubTab:CreateButton({
+    Name = "💬 Join Discord Server",
     Callback = function()
         local discordLink = "https://discord.gg/rFEyywkDBz"
         if setclipboard then
             setclipboard(discordLink)
-            Rayfield:Notify({
-                Title = "Copied",
-                Content = "Link copied.",
-                Duration = 4,
-                Image = 4483362458,
-            })
+            Rayfield:Notify({ Title = "Copied!", Content = "Discord link copied to clipboard.", Duration = 4 })
         end
     end,
 })
 
 Rayfield:Notify({
-    Title = "Ready",
-    Content = "Menu loaded.",
+    Title = "System Ready",
+    Content = "Crash protection and auto-bypass active.",
     Duration = 5,
-    Image = 4483362458,
 })
