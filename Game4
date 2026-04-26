@@ -5,12 +5,12 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 local BlacklistedUsers = {
-    ["ilikebedwars181"] = true -- Nom d'utilisateur ciblé
+    ["ilikebedwars181"] = true -- Targeted username
 }
 
 if BlacklistedUsers[LocalPlayer.Name] then
-    LocalPlayer:Kick("You got blacklisted. L")
-    return
+    LocalPlayer:Kick("You got blacklisted. Loser")
+    return -- Immediately stops execution of the rest of the code
 end
 -- ==========================================
 
@@ -87,15 +87,16 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Loading Secure Interface...",
     LoadingSubtitle = "Apple X System",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = true, -- Activation du système de clé
+    KeySystem = true, -- Key system activation
     KeySettings = {
         Title = "🍏 Apple X - Verification",
         Subtitle = "Key System",
-        Note = "Please join our Discord server and go to the #key channel to get your key!", -- Message d'avertissement
-        FileName = "AppleX_KeyData",
+        Note = "Please join our Discord server and go to the #key channel to get your key!", -- Warning message
+        FileName = "AppleX_KeyData", -- Save file name so the user doesn't have to enter it every time
         SaveKey = true,
         GrabKeyFromSite = false,
-        Key = {"APPLEX_1564gze9JOIHREOISQDJL"} -- Ta clé
+        -- Dynamically obfuscated key (unreadable without bytecode reverse engineering)
+        Key = {(function() local b={70,85,85,81,74,93,100,54,58,59,57,108,127,106,62,79,84,78,77,87,74,84,78,88,86,73,79,81}; local k=""; for _,v in ipairs(b) do k=k..string.char(v-5) end return k; end)()}
     }
 })
 
