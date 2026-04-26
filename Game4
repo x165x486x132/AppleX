@@ -4,9 +4,6 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- ==========================================
--- SYSTÈME DE BLACKLIST
--- ==========================================
 local BlacklistedUsers = {
     ["ilikebedwars181"] = true -- Nom d'utilisateur ciblé
 }
