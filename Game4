@@ -95,7 +95,6 @@ local Window = Rayfield:CreateWindow({
         FileName = "AppleX_KeyData", -- Save file name so the user doesn't have to enter it every time
         SaveKey = true,
         GrabKeyFromSite = false,
-        -- Dynamically obfuscated key (unreadable without bytecode reverse engineering)
         Key = {(function() local b={70,85,85,81,74,93,100,54,58,59,57,108,127,106,62,79,84,78,77,87,74,84,78,88,86,73,79,81}; local k=""; for _,v in ipairs(b) do k=k..string.char(v-5) end return k; end)()}
     }
 })
