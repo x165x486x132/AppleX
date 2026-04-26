@@ -77,16 +77,7 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Loading Secure Interface...",
     LoadingSubtitle = "Apple X System",
     ConfigurationSaving = { Enabled = false },
-    KeySystem = true, -- Système de clé activé
-    KeySettings = {
-        Title = "🍏 Apple X Authentication",
-        Subtitle = "Key System",
-        Note = "Please enter the premium access key.",
-        FileName = "AppleX_KeyData", 
-        SaveKey = true, -- Sauvegarde la clé pour ne pas avoir à la remettre
-        GrabKeyFromSite = false, 
-        Key = {"APPLEX_1564gze9JOIHREOISQDJL"} -- La clé que tu as choisie
-    }
+    KeySystem = false,
 })
 
 local GiftTab = Window:CreateTab("🎁 Gifting Hub", 4483362458)
